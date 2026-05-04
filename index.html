@@ -348,9 +348,9 @@ h2{font-size:17px;font-weight:700;color:var(--txt);margin-bottom:1rem;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script type="module">
-// ── FIREBASE ──
+// ── FIREBASE MULTI-TENANT ──
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAI3bPrAZlAvduooCaUZPF1LNeJcriL-WI",
@@ -364,36 +364,65 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 
-// ── DB: localStorage como caché + Firestore como persistencia ──
-const NEGOCIO_ID = "kiosco_principal";
+// Leer negocioId desde la URL: ?id=kiosco-el-sol
+const params = new URLSearchParams(window.location.search);
+const NEGOCIO_ID = params.get("id") || "demo";
+window.NEGOCIO_ID = NEGOCIO_ID;
 
 window.DB = {
   get(k) {
-    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e) { return null; }
+    try { const v = localStorage.getItem(NEGOCIO_ID+":"+k); return v ? JSON.parse(v) : null; } catch(e) { return null; }
   },
   set(k, v) {
-    try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {}
+    try { localStorage.setItem(NEGOCIO_ID+":"+k, JSON.stringify(v)); } catch(e) {}
   },
   async syncToCloud(k, v) {
     try {
-      await setDoc(doc(db, NEGOCIO_ID, k), { data: JSON.stringify(v), updated: Date.now() });
+      await setDoc(doc(db, "negocios", NEGOCIO_ID, "datos", k), { data: JSON.stringify(v), updated: Date.now() });
     } catch(e) { console.warn("Cloud sync error:", e); }
   },
   async loadFromCloud(k) {
     try {
-      const snap = await getDoc(doc(db, NEGOCIO_ID, k));
+      const snap = await getDoc(doc(db, "negocios", NEGOCIO_ID, "datos", k));
       if (snap.exists()) {
         const v = JSON.parse(snap.data().data);
-        localStorage.setItem(k, JSON.stringify(v));
+        localStorage.setItem(NEGOCIO_ID+":"+k, JSON.stringify(v));
         return v;
       }
     } catch(e) { console.warn("Cloud load error:", e); }
     return null;
+  },
+  async checkCliente() {
+    try {
+      const snap = await getDoc(doc(db, "clientes", NEGOCIO_ID));
+      if (!snap.exists()) return { ok: false, msg: "Negocio no encontrado. Verificá el link." };
+      const d = snap.data();
+      if (!d.activo) return { ok: false, msg: "Cuenta suspendida. Contactá al administrador." };
+      if (d.vencimiento && new Date(d.vencimiento) < new Date()) return { ok: false, msg: "Suscripción vencida el "+new Date(d.vencimiento).toLocaleDateString("es-AR")+". Contactá al administrador." };
+      return { ok: true, negocio: d };
+    } catch(e) { return { ok: true, negocio: { nombre: "Mi Kiosco" } }; }
   }
 };
 
-window.FIREBASE_READY = true;
-window.dispatchEvent(new Event("firebase-ready"));
+// Verificar cliente y arrancar app
+const check = await window.DB.checkCliente();
+if (!check.ok) {
+  document.getElementById("root").innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:2rem;text-align:center;font-family:sans-serif;">
+      <div style="font-size:48px;margin-bottom:1rem;">🔒</div>
+      <div style="font-size:18px;font-weight:700;color:#1c1917;margin-bottom:0.5rem;">Acceso no disponible</div>
+      <div style="font-size:14px;color:#78716c;max-width:300px;">${check.msg}</div>
+      <div style="margin-top:2rem;font-size:12px;color:#a8a29e;">Powered by AppKiosco</div>
+    </div>`;
+} else {
+  // Guardar nombre del negocio si viene de Firebase
+  if (check.negocio && check.negocio.nombre) {
+    const localN = window.DB.get("kiosco:negocio");
+    if (!localN) window.DB.set("kiosco:negocio", check.negocio.nombre);
+  }
+  window.FIREBASE_READY = true;
+  window.dispatchEvent(new Event("firebase-ready"));
+}
 </script>
 <script>
 const {useState,useEffect,useRef}=React;
