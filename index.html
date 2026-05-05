@@ -405,23 +405,31 @@ window.DB = {
 };
 
 // Verificar cliente y arrancar app
-const check = await window.DB.checkCliente();
-if (!check.ok) {
-  document.getElementById("root").innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:2rem;text-align:center;font-family:sans-serif;">
-      <div style="font-size:48px;margin-bottom:1rem;">🔒</div>
-      <div style="font-size:18px;font-weight:700;color:#1c1917;margin-bottom:0.5rem;">Acceso no disponible</div>
-      <div style="font-size:14px;color:#78716c;max-width:300px;">${check.msg}</div>
-      <div style="margin-top:2rem;font-size:12px;color:#a8a29e;">Powered by AppKiosco</div>
-    </div>`;
-} else {
-  // Guardar nombre del negocio si viene de Firebase
-  if (check.negocio && check.negocio.nombre) {
-    const localN = window.DB.get("kiosco:negocio");
-    if (!localN) window.DB.set("kiosco:negocio", check.negocio.nombre);
-  }
+// Si no hay ?id= en la URL → modo demo sin verificación
+const sinID = (NEGOCIO_ID === "demo" && !params.has("id"));
+
+if (sinID) {
+  // Modo demo: acceso libre para pruebas
   window.FIREBASE_READY = true;
   window.dispatchEvent(new Event("firebase-ready"));
+} else {
+  const check = await window.DB.checkCliente();
+  if (!check.ok) {
+    document.getElementById("root").innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:2rem;text-align:center;font-family:sans-serif;">
+        <div style="font-size:48px;margin-bottom:1rem;">🔒</div>
+        <div style="font-size:18px;font-weight:700;color:#1c1917;margin-bottom:0.5rem;">Acceso no disponible</div>
+        <div style="font-size:14px;color:#78716c;max-width:300px;">${check.msg}</div>
+        <div style="margin-top:2rem;font-size:12px;color:#a8a29e;">Powered by AppKiosco</div>
+      </div>`;
+  } else {
+    if (check.negocio && check.negocio.nombre) {
+      const localN = window.DB.get("kiosco:negocio");
+      if (!localN) window.DB.set("kiosco:negocio", check.negocio.nombre);
+    }
+    window.FIREBASE_READY = true;
+    window.dispatchEvent(new Event("firebase-ready"));
+  }
 }
 </script>
 <script>
