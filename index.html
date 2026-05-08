@@ -318,8 +318,9 @@ h2{font-size:17px;font-weight:700;color:var(--txt);margin-bottom:1rem;}
 
 
 /* ===== POS SPLIT LAYOUT ===== */
-.pos-split{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px;min-height:420px;}
-.pos-left{width:40%;flex-shrink:0;padding:8px;overflow-y:auto;max-height:calc(100vh - 200px);border-right:1px solid var(--border);background:var(--bg2);}
+.pos-split{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px;height:calc(100vh - 220px);min-height:380px;max-height:700px;}
+.pos-left{width:40%;flex-shrink:0;padding:8px;overflow-y:auto;border-right:1px solid var(--border);background:var(--bg2);}
+.pos-right{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;}
 .pos-left-title{font-size:9px;font-weight:700;color:var(--txt2);letter-spacing:.06em;margin-bottom:6px;}
 .pos-chip-scroll{display:flex;gap:4px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;scrollbar-width:none;}
 .pos-chip-scroll::-webkit-scrollbar{display:none;}
@@ -338,7 +339,7 @@ h2{font-size:17px;font-weight:700;color:var(--txt);margin-bottom:1rem;}
 .pos-prod-nombre{font-size:10px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;}
 .pos-prod-precio{font-size:10px;color:var(--blue);font-weight:700;}
 /* ===== CARRITO DERECHO ===== */
-.pos-right{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);}
+/* pos-right defined above */
 .pos-cart-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);}
 .pos-cart-title{font-size:10px;font-weight:700;color:var(--txt2);letter-spacing:.05em;}
 .pos-limpiar{font-size:11px;color:var(--txt2);background:none;border:none;cursor:pointer;font-family:inherit;}
@@ -474,8 +475,7 @@ function SecVentas({prods,onStock,ventas,onVenta}){
               React.createElement("div",{className:"pos-prod-foto",style:{background:bg}},
                 p.foto?React.createElement("img",{src:p.foto,alt:p.nombre}):React.createElement("span",null,ICONS[p.categoria]||"📦"),
                 enC&&React.createElement("div",{className:"pos-prod-badge"},enC.qty),
-                agotado&&React.createElement("div",{className:"pos-prod-sin"},"SIN
-STOCK")
+                agotado&&React.createElement("div",{className:"pos-prod-sin"},"SIN STOCK")
               ),
               React.createElement("div",{className:"pos-prod-info"},
                 React.createElement("div",{className:"pos-prod-nombre"},p.nombre),
