@@ -806,6 +806,8 @@ function PantallaActivacion({onActivado}){
   const[celular,setCelular]=useState("");
   const[email,setEmail]=useState("");
   const[negocio,setNegocio]=useState("");
+  const[pinIngresado,setPinIngresado]=useState("");
+  const[terminos,setTerminos]=useState(false);
   const[paso,setPaso]=useState(1);
   const[error,setError]=useState("");
   const[cargando,setCargando]=useState(false);
@@ -828,8 +830,9 @@ function PantallaActivacion({onActivado}){
   };
 
   const completarActivacion=async()=>{
-    if(!celular.trim()||!email.trim()||!negocio.trim()){setError("Completá todos los campos");return;}
+    if(!celular.trim()||!email.trim()||!negocio.trim()||!pinIngresado.trim()){setError("Completá todos los campos");return;}
     if(!/\S+@\S+\.\S+/.test(email)){setError("Email inválido");return;}
+    if(!terminos){setError("Debés aceptar los Términos y Condiciones para continuar");return;}
     setCargando(true);setError("");
     try{
       const codigoUp=codigo.trim().toUpperCase();
@@ -838,8 +841,9 @@ function PantallaActivacion({onActivado}){
       const lic=snap.data();
       if(lic.email&&lic.email.trim().toLowerCase()!==email.trim().toLowerCase()){setError("El email no coincide con el registrado. Contactá al administrador.");setCargando(false);return;}
       if(lic.celular&&lic.celular.trim()!==celular.trim()){setError("El celular no coincide con el registrado. Contactá al administrador.");setCargando(false);return;}
+      if(String(lic.pin)!==pinIngresado.trim()){setError("El PIN no es correcto. Revisá el que te enviaron.");setCargando(false);return;}
       const deviceId=getDeviceId();
-      await window.fsUpdateDoc(ref,{estado:"usado",deviceId,celular:celular.trim(),email:email.trim(),negocio:negocio.trim(),activadoEn:new Date().toISOString()});
+      await window.fsUpdateDoc(ref,{estado:"usado",deviceId,celular:celular.trim(),email:email.trim(),negocio:negocio.trim(),aceptoTerminos:true,fechaAceptoTerminos:new Date().toISOString(),activadoEn:new Date().toISOString()});
       const licObj={codigo:codigoUp,pin:lic.pin,email:email.trim(),celular:celular.trim(),negocio:negocio.trim(),negocioId:lic.negocioId||codigoUp,deviceId,activado:true};
       localStorage.setItem("kiosco_licencia",JSON.stringify(licObj));
       window.DB.set("kiosco:negocio",negocio.trim());
@@ -859,7 +863,7 @@ function PantallaActivacion({onActivado}){
       React.createElement("p",{style:{fontSize:14,color:"#7a9ab8",textAlign:"center",maxWidth:280,lineHeight:1.5,margin:0}},"Primera vez aquí. Ingresá el código de activación que recibiste."),
       React.createElement("div",{style:{width:"100%",maxWidth:320}},
         React.createElement("label",{style:{fontSize:11,color:"#7a9ab8",marginBottom:4,display:"block"}},"Código de activación"),
-        React.createElement("input",{style:{...stInp,textAlign:"center",fontSize:20,letterSpacing:4,textTransform:"uppercase"},placeholder:"KIOSCO-XXXX",value:codigo,onChange:e=>setCodigo(e.target.value.toUpperCase()),onKeyDown:e=>e.key==="Enter"&&verificarCodigo()})
+        React.createElement("input",{style:{...stInp,textAlign:"center",fontSize:20,letterSpacing:4,textTransform:"uppercase"},placeholder:"KI-XXXXXX",value:codigo,onChange:e=>setCodigo(e.target.value.toUpperCase()),onKeyDown:e=>e.key==="Enter"&&verificarCodigo()})
       ),
       error&&React.createElement("p",{style:{fontSize:13,color:"#f07070",textAlign:"center",margin:0}},error),
       React.createElement("button",{style:{...stBtn,width:200},disabled:cargando,onClick:verificarCodigo},cargando?"Verificando...":"Continuar →")
@@ -869,7 +873,12 @@ function PantallaActivacion({onActivado}){
       React.createElement("div",{style:{width:"100%",maxWidth:320,display:"flex",flexDirection:"column",gap:10}},
         React.createElement("div",null,React.createElement("label",{style:{fontSize:11,color:"#7a9ab8",marginBottom:4,display:"block"}},"Nombre del negocio *"),React.createElement("input",{style:stInp,placeholder:"Ej: Kiosco El Sol",value:negocio,onChange:e=>setNegocio(e.target.value)})),
         React.createElement("div",null,React.createElement("label",{style:{fontSize:11,color:"#7a9ab8",marginBottom:4,display:"block"}},"Número de celular *"),React.createElement("input",{style:stInp,type:"tel",placeholder:"3816559001",value:celular,onChange:e=>setCelular(e.target.value)})),
-        React.createElement("div",null,React.createElement("label",{style:{fontSize:11,color:"#7a9ab8",marginBottom:4,display:"block"}},"Email *"),React.createElement("input",{style:stInp,type:"email",placeholder:"tu@email.com",value:email,onChange:e=>setEmail(e.target.value)}))
+        React.createElement("div",null,React.createElement("label",{style:{fontSize:11,color:"#7a9ab8",marginBottom:4,display:"block"}},"Email *"),React.createElement("input",{style:stInp,type:"email",placeholder:"tu@email.com",value:email,onChange:e=>setEmail(e.target.value)})),
+        React.createElement("div",null,React.createElement("label",{style:{fontSize:11,color:"#7a9ab8",marginBottom:4,display:"block"}},"PIN de activación *"),React.createElement("input",{style:stInp,type:"number",placeholder:"PIN que recibiste con el código",value:pinIngresado,onChange:e=>setPinIngresado(e.target.value)}))
+      ),
+      React.createElement("label",{style:{display:"flex",alignItems:"flex-start",gap:10,maxWidth:320,cursor:"pointer"}},
+        React.createElement("input",{type:"checkbox",checked:terminos,onChange:e=>setTerminos(e.target.checked),style:{marginTop:3,width:18,height:18,flexShrink:0}}),
+        React.createElement("span",{style:{fontSize:12,color:"#7a9ab8",lineHeight:1.5}},"Acepto los ",React.createElement("span",{style:{color:"#5daaff",fontWeight:600}},"Términos y Condiciones")," del servicio. La app se contrata mensualmente. El acceso se suspende si el pago no se realiza antes del día 11 de cada mes.")
       ),
       error&&React.createElement("p",{style:{fontSize:13,color:"#f07070",textAlign:"center",margin:0}},error),
       React.createElement("button",{style:{...stBtn,width:200},disabled:cargando,onClick:completarActivacion},cargando?"Activando...":"Activar app →")
