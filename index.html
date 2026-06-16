@@ -526,7 +526,172 @@ function ModalProd({prod,onSave,onClose}){
 }
 
 // ── CATÁLOGO (MODIFICADO: muestra cajones para bebidas) ───────────────────────
+
+// ── CARGA DE STOCK CON PISTOLA LECTORA ───────────────────────────────────────
+function SecCargaStock({prods,onGuardar,showToast}){
+  const[codigo,setCodigo]=useState("");
+  const[encontrado,setEncontrado]=useState(null);
+  const[noEncontrado,setNoEncontrado]=useState(false);
+  const[exh,setExh]=useState(0);
+  const[dep,setDep]=useState(0);
+  const[foto,setFoto]=useState("");
+  const[scanning,setScanning]=useState(false);
+  const[modalNuevo,setModalNuevo]=useState(null);
+
+  const buscar=code=>{
+    const c=code.trim();
+    if(!c)return;
+    const p=prods.find(x=>x.codigoBarras===c);
+    if(p){
+      setEncontrado(p);setNoEncontrado(false);
+      setExh(p.cantidadExhibido||0);setDep(p.cantidadDeposito||0);
+      setFoto(p.foto||"");setCodigo(c);
+    }else{
+      setEncontrado(null);setNoEncontrado(true);setCodigo(c);
+    }
+  };
+
+  // Pistola lectora activa solo cuando no hay input focalizado
+  useBarcodeGun(buscar);
+
+  const guardar=()=>{
+    if(!encontrado)return;
+    const exhN=parseInt(exh)||0;
+    const depN=parseInt(dep)||0;
+    const nuevos=prods.map(p=>p.id===encontrado.id
+      ?{...p,cantidadExhibido:exhN,cantidadDeposito:depN,cantidad:exhN+depN,...(foto&&{foto})}
+      :p
+    );
+    onGuardar(nuevos,false);
+    if(showToast)showToast("✓ "+encontrado.nombre+" actualizado");
+    resetear();
+  };
+
+  const resetear=()=>{
+    setEncontrado(null);setNoEncontrado(false);
+    setCodigo("");setExh(0);setDep(0);setFoto("");
+  };
+
+  const upCajon=encontrado&&encontrado.unidadesPorCajon&&CATS_BEBIDAS.includes(encontrado.categoria)?encontrado.unidadesPorCajon:null;
+  const cajones=upCajon?Math.floor((parseInt(dep)||0)/upCajon):null;
+  const sueltas=upCajon?(parseInt(dep)||0)%upCajon:null;
+
+  return React.createElement("div",null,
+    // Banner pistola lista
+    React.createElement("div",{style:{background:"var(--green-bg)",color:"var(--green)",borderRadius:"var(--radius-lg)",padding:"14px 16px",marginBottom:"12px",textAlign:"center",border:"1px solid rgba(59,109,17,.2)"}},
+      React.createElement("div",{style:{fontSize:24,marginBottom:2}},"🔫"),
+      React.createElement("div",{style:{fontWeight:700,fontSize:14}},"Pistola lista"),
+      React.createElement("div",{style:{fontSize:12,opacity:.75,marginTop:2}},"Apuntá al producto y apretá el gatillo")
+    ),
+
+    // Búsqueda manual + cámara (solo si no hay producto activo)
+    !encontrado&&!noEncontrado&&React.createElement("div",null,
+      React.createElement("div",{className:"bc-field",style:{marginBottom:10}},
+        React.createElement("input",{className:"search",placeholder:"O escribí el código de barras...",value:codigo,onChange:e=>setCodigo(e.target.value),onKeyDown:e=>e.key==="Enter"&&buscar(codigo),style:{marginBottom:0}}),
+        React.createElement("button",{className:"btn-scan",onClick:()=>setScanning(true),title:"Usar cámara"},"📷")
+      ),
+      React.createElement("p",{style:{fontSize:11,color:"var(--txt2)",textAlign:"center"}},"También podés usar la cámara si no tenés pistola")
+    ),
+    scanning&&React.createElement(Scanner,{onDetect:c=>{setScanning(false);buscar(c);},onClose:()=>setScanning(false)}),
+
+    // ── PRODUCTO ENCONTRADO ──────────────────────────────────────────────────
+    encontrado&&React.createElement("div",{className:"card"},
+      // Área de foto con botón superpuesto
+      React.createElement("div",{style:{position:"relative",borderRadius:"var(--radius-lg) var(--radius-lg) 0 0",overflow:"hidden"}},
+        React.createElement("div",{className:"card-photo",style:{height:200,background:foto?"#000":"var(--bg2)"}},
+          foto
+            ?React.createElement("img",{src:foto,alt:encontrado.nombre,style:{width:"100%",height:"100%",objectFit:"cover"}})
+            :React.createElement("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:8}},
+                React.createElement("span",{style:{fontSize:56}},ICONS[encontrado.categoria]||"📦"),
+                React.createElement("span",{style:{fontSize:12,color:"var(--txt2)"}},"Sin foto todavía")
+              )
+        ),
+        // Botón flotante para sacar foto
+        React.createElement("label",{style:{position:"absolute",bottom:10,right:10,background:"rgba(0,0,0,.72)",color:"#fff",borderRadius:"var(--radius)",padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,backdropFilter:"blur(4px)"}},
+          React.createElement("span",null,"📷"),
+          React.createElement("span",null,foto?"Cambiar foto":"Agregar foto"),
+          React.createElement("input",{type:"file",accept:"image/*",capture:"environment",style:{display:"none"},onChange:e=>{const fl=e.target.files[0];if(fl)compress(fl,b=>setFoto(b));}})
+        ),
+        // Botón galería
+        React.createElement("label",{style:{position:"absolute",bottom:10,left:10,background:"rgba(0,0,0,.72)",color:"#fff",borderRadius:"var(--radius)",padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,backdropFilter:"blur(4px)"}},
+          React.createElement("span",null,"🖼️"),
+          React.createElement("span",null,"Galería"),
+          React.createElement("input",{type:"file",accept:"image/*",style:{display:"none"},onChange:e=>{const fl=e.target.files[0];if(fl)compress(fl,b=>setFoto(b));}})
+        ),
+        foto&&React.createElement("button",{onClick:()=>setFoto(""),style:{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:16,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}},"✕")
+      ),
+
+      React.createElement("div",{className:"card-body"},
+        // Info del producto
+        React.createElement("div",{className:"card-name",style:{fontSize:17,marginBottom:3}},encontrado.nombre),
+        React.createElement("div",{className:"card-cat",style:{marginBottom:4}},(ICONS[encontrado.categoria]||"")+" "+encontrado.categoria),
+        encontrado.codigoBarras&&React.createElement("div",{className:"bc-row"},
+          React.createElement("span",null,"▌▌"),
+          React.createElement("span",{className:"bc-num"},encontrado.codigoBarras)
+        ),
+        React.createElement("div",{style:{height:1,background:"var(--border)",margin:"10px 0"}}),
+
+        // Controles de stock
+        React.createElement("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt2)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:8}},"📦 Stock actual"),
+        React.createElement("div",{className:"stock-split"},
+          React.createElement("div",{className:"split-box exh"},
+            React.createElement("div",{className:"split-label exh"},"Exhibido"),
+            React.createElement("div",{className:"split-ctrl",style:{gap:6,marginTop:6}},
+              React.createElement("button",{className:"bsp",style:{width:30,height:30,fontSize:18},onClick:()=>setExh(v=>Math.max(0,v-1))},"−"),
+              React.createElement("input",{type:"number",min:"0",value:exh,onChange:e=>setExh(parseInt(e.target.value)||0),style:{width:52,textAlign:"center",fontSize:20,fontWeight:700,border:"1px solid var(--border)",borderRadius:6,background:"var(--bg)",color:"var(--txt)",padding:"2px"}}),
+              React.createElement("button",{className:"bsp",style:{width:30,height:30,fontSize:18},onClick:()=>setExh(v=>v+1)},"+")
+            )
+          ),
+          React.createElement("div",{className:"split-box dep"},
+            React.createElement("div",{className:"split-label dep"},"Depósito"),
+            React.createElement("div",{className:"split-ctrl",style:{gap:6,marginTop:6}},
+              React.createElement("button",{className:"bsp",style:{width:30,height:30,fontSize:18},onClick:()=>setDep(v=>Math.max(0,v-1))},"−"),
+              React.createElement("input",{type:"number",min:"0",value:dep,onChange:e=>setDep(parseInt(e.target.value)||0),style:{width:52,textAlign:"center",fontSize:20,fontWeight:700,border:"1px solid var(--border)",borderRadius:6,background:"var(--bg)",color:"var(--txt)",padding:"2px"}}),
+              React.createElement("button",{className:"bsp",style:{width:30,height:30,fontSize:18},onClick:()=>setDep(v=>v+1)},"+")
+            ),
+            upCajon&&React.createElement("div",{className:"cajon-info",style:{marginTop:4}},"🍾 "+cajones+"caj + "+sueltas+"u")
+          )
+        ),
+
+        // Botones
+        React.createElement("button",{className:"btn-full",style:{marginTop:12},onClick:guardar},"✓ Guardar cambios"),
+        React.createElement("button",{className:"btn-limpiar",style:{marginTop:6},onClick:resetear},"🔄 Escanear otro producto")
+      )
+    ),
+
+    // ── PRODUCTO NO ENCONTRADO ──────────────────────────────────────────────
+    noEncontrado&&React.createElement("div",{style:{background:"var(--orange-bg)",borderRadius:"var(--radius-lg)",padding:"24px 20px",textAlign:"center"}},
+      React.createElement("div",{style:{fontSize:32,marginBottom:8}},"⚠️"),
+      React.createElement("div",{style:{fontWeight:700,color:"var(--orange)",fontSize:15,marginBottom:4}},"Código no encontrado"),
+      React.createElement("div",{style:{fontSize:12,color:"var(--txt2)",fontFamily:"monospace",background:"var(--bg)",borderRadius:6,padding:"4px 10px",display:"inline-block",marginBottom:12}},codigo),
+      React.createElement("p",{style:{fontSize:13,color:"var(--txt2)",marginBottom:16,lineHeight:1.5}},"Este código no está en el catálogo. ¿Querés crear el producto nuevo?"),
+      React.createElement("button",{className:"btn-pri",style:{width:"100%",marginBottom:8},onClick:()=>{setModalNuevo({codigoBarras:codigo,id:null});setNoEncontrado(false);}},"+ Crear producto nuevo"),
+      React.createElement("button",{className:"btn-sec",style:{width:"100%"},onClick:resetear},"Escanear otro")
+    ),
+
+    // Modal para crear producto nuevo desde aquí
+    modalNuevo!==null&&React.createElement(ModalProd,{
+      prod:modalNuevo,
+      onSave:p=>{onGuardar([...prods,p],true);setModalNuevo(null);if(showToast)showToast("✓ Producto creado");setCodigo("");},
+      onClose:()=>setModalNuevo(null)
+    })
+  );
+}
+
+// ── CATÁLOGO (con sub-tab Carga de stock) ────────────────────────────────────
 function SecCatalogo({prods,onGuardar,showToast}){
+  const[catTab,setCatTab]=useState("catalogo");
+  return React.createElement("div",null,
+    React.createElement("div",{className:"caja-tabs"},
+      React.createElement("button",{className:"caja-tab"+(catTab==="catalogo"?" activo":""),onClick:()=>setCatTab("catalogo")},"📦 Catálogo"),
+      React.createElement("button",{className:"caja-tab"+(catTab==="carga"?" activo":""),onClick:()=>setCatTab("carga")},"📥 Carga stock")
+    ),
+    catTab==="catalogo"&&React.createElement(CatalogoGrid,{prods,onGuardar,showToast}),
+    catTab==="carga"&&React.createElement(SecCargaStock,{prods,onGuardar,showToast})
+  );
+}
+
+function CatalogoGrid({prods,onGuardar,showToast}){
   const[bus,setBus]=useState("");
   const[modal,setModal]=useState(null);
   const fil=prods.filter(p=>p.nombre.toLowerCase().includes(bus.toLowerCase())||(p.codigoBarras&&p.codigoBarras.includes(bus))||p.categoria.toLowerCase().includes(bus.toLowerCase()));
@@ -621,7 +786,7 @@ function ModalComprobante({venta,negocio,onClose}){
 }
 
 // ── VENTAS (MODIFICADO: pistola lectora + nombres en categorías) ──────────────
-function SecVentas({prods,onStock,ventas,onVenta,clientes,onGuardarCliente,showToast}){
+function SecVentas({prods,onStock,ventas,onVenta,clientes,onGuardarCliente,showToast,layout}){
   const[bus,setBus]=useState("");
   const[catFiltro,setCatFiltro]=useState("Todos");
   const[carrito,setCarrito]=useState([]);
@@ -673,6 +838,98 @@ function SecVentas({prods,onStock,ventas,onVenta,clientes,onGuardarCliente,showT
   };
   const totalH=ventas.reduce((s,v)=>s+v.total,0);
 
+
+  // ─── Renderizado de productos según layout elegido ───────────────────────
+  const renderProds=()=>{
+
+    // TILES POS: grilla 3x3 de cuadrados grandes
+    if(layout==="tiles"){
+      return React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4}},
+        fil.map(p=>{
+          const ag=(p.cantidadExhibido||0)<=0;
+          const enC=carrito.find(x=>x.id===p.id);
+          return React.createElement("div",{key:p.id,
+            style:{background:enC?"var(--blue-bg)":"var(--bg)",border:"2px solid "+(enC?"var(--blue)":"var(--border)"),borderRadius:10,padding:"6px 3px",textAlign:"center",cursor:ag?"not-allowed":"pointer",opacity:ag?.3:1,position:"relative",display:"flex",flexDirection:"column",alignItems:"center",minHeight:80,justifyContent:"center"},
+            onClick:()=>!ag&&add(p)},
+            enC&&React.createElement("div",{style:{position:"absolute",top:4,right:4,background:"var(--blue)",color:"#fff",borderRadius:"50%",width:17,height:17,fontSize:9,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}},enC.qty),
+            React.createElement("div",{style:{fontSize:26,marginBottom:3}},p.foto?React.createElement("img",{src:p.foto,style:{width:34,height:34,objectFit:"cover",borderRadius:6}}):React.createElement("span",null,ICONS[p.categoria]||"📦")),
+            React.createElement("div",{style:{fontSize:9,fontWeight:700,lineHeight:1.2,color:"var(--txt)",width:"100%",overflow:"hidden",textOverflow:"ellipsis",padding:"0 2px"}},p.nombre),
+            React.createElement("div",{style:{fontSize:10,fontWeight:800,color:"var(--blue)",marginTop:2}},"$"+p.precioVenta.toLocaleString("es-AR")),
+            ag&&React.createElement("div",{style:{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#fff",fontWeight:700}},"SIN STOCK")
+          );
+        })
+      );
+    }
+
+    // METÁLICO: lista con precios tipo display LED naranja
+    if(layout==="metalico"){
+      return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:4}},
+        fil.map(p=>{
+          const ag=(p.cantidadExhibido||0)<=0;
+          const enC=carrito.find(x=>x.id===p.id);
+          return React.createElement("div",{key:p.id,
+            style:{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",border:"1px solid var(--border2)",borderRadius:6,cursor:ag?"not-allowed":"pointer",opacity:ag?.3:1,background:enC?"var(--bg2)":"var(--bg)"},
+            onClick:()=>!ag&&add(p)},
+            React.createElement("span",{style:{fontSize:15,flexShrink:0}},p.foto?React.createElement("img",{src:p.foto,style:{width:22,height:22,objectFit:"cover",borderRadius:3}}):React.createElement("span",null,ICONS[p.categoria]||"📦")),
+            React.createElement("div",{style:{flex:1,minWidth:0}},
+              React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"var(--txt)",textTransform:"uppercase",letterSpacing:".03em",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",fontFamily:"monospace"}},p.nombre),
+              React.createElement("div",{style:{fontSize:8,color:"var(--txt2)",fontFamily:"monospace"}},p.categoria.toUpperCase().slice(0,10)+" · "+((p.cantidadExhibido||0))+"u")
+            ),
+            React.createElement("div",{style:{background:"#000",border:"1px solid #333",borderRadius:3,padding:"2px 6px",fontSize:9,fontWeight:700,color:"#ff6b00",textShadow:"0 0 5px rgba(255,107,0,.5)",flexShrink:0,fontFamily:"monospace"}},"$"+p.precioVenta.toLocaleString("es-AR")),
+            React.createElement("button",{
+              style:{background:"var(--bg2)",border:"1px solid var(--border2)",borderBottom:"3px solid rgba(0,0,0,.35)",borderRadius:4,color:enC?"var(--blue)":"var(--txt)",fontSize:13,fontWeight:900,padding:"3px 7px",cursor:"pointer",flexShrink:0,fontFamily:"monospace"},
+              onClick:e=>{e.stopPropagation();!ag&&add(p);}
+            },enC?"×"+enC.qty:"+")
+          );
+        })
+      );
+    }
+
+    // TICKET: estilo papel / comandera de restaurante
+    if(layout==="ticket"){
+      return React.createElement("div",{style:{fontFamily:"'Courier New',monospace"}},
+        fil.map((p,i)=>{
+          const ag=(p.cantidadExhibido||0)<=0;
+          const enC=carrito.find(x=>x.id===p.id);
+          return React.createElement("div",{key:p.id,
+            style:{display:"flex",alignItems:"center",padding:"7px 2px",borderBottom:"1px dashed var(--border)",gap:5,cursor:ag?"not-allowed":"pointer",opacity:ag?.3:1,background:enC?"var(--bg2)":"transparent"},
+            onClick:()=>!ag&&add(p)},
+            React.createElement("span",{style:{fontSize:9,color:"var(--txt2)",minWidth:16,flexShrink:0}},String(i+1).padStart(2,"0")),
+            React.createElement("span",{style:{fontSize:14,flexShrink:0}},p.foto?React.createElement("img",{src:p.foto,style:{width:18,height:18,objectFit:"cover",borderRadius:3}}):React.createElement("span",null,ICONS[p.categoria]||"📦")),
+            React.createElement("div",{style:{flex:1,minWidth:0}},
+              React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"var(--txt)",textTransform:"uppercase",letterSpacing:".02em",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},p.nombre),
+              React.createElement("div",{style:{fontSize:8,color:"var(--txt2)"}},((p.cantidadExhibido||0))+"u · "+p.categoria)
+            ),
+            React.createElement("span",{style:{fontSize:10,fontWeight:900,color:"var(--txt)",flexShrink:0}},"$"+p.precioVenta.toLocaleString("es-AR")),
+            React.createElement("div",{
+              style:{width:20,height:20,border:"2px solid "+(enC?"transparent":"var(--txt)"),borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,flexShrink:0,background:enC?"var(--blue)":"transparent",color:enC?"#fff":"var(--txt)"}
+            },enC?"✓":"+")
+          );
+        })
+      );
+    }
+
+    // DEFAULT: layout clásico actual (filas con foto grande)
+    return React.createElement("div",{className:"pos-prod-grid"},
+      fil.map(p=>{
+        const agotado=(p.cantidadExhibido||0)<=0;
+        const enC=carrito.find(x=>x.id===p.id);
+        const bg=CAT_COLORS[p.categoria]||"#F5F5F4";
+        return React.createElement("div",{key:p.id,className:"pos-prod"+(agotado?" agotado":"")+(enC?" en-c":""),onClick:()=>!agotado&&add(p)},
+          React.createElement("div",{className:"pos-prod-foto",style:{background:bg}},
+            p.foto?React.createElement("img",{src:p.foto,alt:p.nombre}):React.createElement("span",null,ICONS[p.categoria]||"📦"),
+            enC&&React.createElement("div",{className:"pos-prod-badge"},enC.qty),
+            agotado&&React.createElement("div",{className:"pos-prod-sin"},"SIN STOCK")
+          ),
+          React.createElement("div",{className:"pos-prod-info"},
+            React.createElement("div",{className:"pos-prod-nombre"},p.nombre),
+            React.createElement("div",{className:"pos-prod-precio"},"$"+p.precioVenta.toLocaleString("es-AR"))
+          )
+        );
+      })
+    );
+  };
+
   return React.createElement("div",null,
     showPrint&&ultimaVenta&&React.createElement(ModalComprobante,{venta:ultimaVenta,negocio:"Mi Kiosco",onClose:()=>setShowPrint(false)}),
     React.createElement("div",{style:{display:"flex",gap:6,marginBottom:8}},
@@ -698,24 +955,7 @@ function SecVentas({prods,onStock,ventas,onVenta,clientes,onGuardarCliente,showT
         ),
         prods.length===0&&React.createElement("div",{className:"empty",style:{fontSize:11}},"Cargá productos en Catálogo."),
         fil.length===0&&prods.length>0&&React.createElement("div",{className:"empty",style:{fontSize:11}},"Sin resultados."),
-        React.createElement("div",{className:"pos-prod-grid"},
-          fil.map(p=>{
-            const agotado=(p.cantidadExhibido||0)<=0;
-            const enC=carrito.find(x=>x.id===p.id);
-            const bg=CAT_COLORS[p.categoria]||"#F5F5F4";
-            return React.createElement("div",{key:p.id,className:"pos-prod"+(agotado?" agotado":"")+(enC?" en-c":""),onClick:()=>!agotado&&add(p)},
-              React.createElement("div",{className:"pos-prod-foto",style:{background:bg}},
-                p.foto?React.createElement("img",{src:p.foto,alt:p.nombre}):React.createElement("span",null,ICONS[p.categoria]||"📦"),
-                enC&&React.createElement("div",{className:"pos-prod-badge"},enC.qty),
-                agotado&&React.createElement("div",{className:"pos-prod-sin"},"SIN STOCK")
-              ),
-              React.createElement("div",{className:"pos-prod-info"},
-                React.createElement("div",{className:"pos-prod-nombre"},p.nombre),
-                React.createElement("div",{className:"pos-prod-precio"},"$"+p.precioVenta.toLocaleString("es-AR"))
-              )
-            );
-          })
-        )
+        renderProds()
       ),
 
       React.createElement("div",{className:"pos-right"},
@@ -979,7 +1219,7 @@ function SecGestion({prods,ventas,onPrecios,clientes,onGuardar,gastos,onAgregarG
 }
 
 // ── NUEVA: Configuración como sección (no modal) ──────────────────────────────
-function SecConfig({negocio,onSave,tema,onTema,darkMode,onToggleDark}){
+function SecConfig({negocio,onSave,tema,onTema,darkMode,onToggleDark,layout,onLayout}){
   const[n,setN]=useState(negocio);
   const[modo,setModo]=useState(()=>TEMAS_K[tema]?.modo||"oscuro");
   const temasFil=Object.entries(TEMAS_K).filter(([,t])=>t.modo===modo);
@@ -1001,6 +1241,58 @@ function SecConfig({negocio,onSave,tema,onTema,darkMode,onToggleDark}){
           React.createElement("div",{style:{fontSize:12,fontWeight:600,color:"var(--txt)",marginBottom:6}},t.nombre),
           React.createElement("div",{style:{display:"flex",justifyContent:"center",gap:4,marginBottom:4}},t.dots.map((d,i)=>React.createElement("span",{key:i,style:{width:13,height:13,borderRadius:"50%",background:d,display:"inline-block",border:"1px solid rgba(128,128,128,.2)"}}))),
           tema===id&&React.createElement("div",{style:{fontSize:11,color:"var(--blue)",fontWeight:700}},"✓ Activo")
+        ))
+      )
+    ),
+
+    React.createElement("div",{className:"config-section"},
+      React.createElement("div",{className:"config-title"},"🖥️ Estilo de pantalla"),
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
+        [
+          {id:"default", label:"Clásico",   desc:"Filas con foto",  thumb:
+            React.createElement("div",{style:{width:"100%",height:52,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden",padding:5,background:"var(--bg)",display:"flex",flexDirection:"column",gap:3}},
+              [0,1,2].map(i=>React.createElement("div",{key:i,style:{height:12,borderRadius:3,background:"var(--bg2)",display:"flex",alignItems:"center",padding:"0 4px",gap:4}},
+                React.createElement("div",{style:{width:9,height:9,borderRadius:"50%",background:"var(--border2)",flexShrink:0}}),
+                React.createElement("div",{style:{flex:1,height:4,borderRadius:2,background:"var(--border2)"}})
+              ))
+            )
+          },
+          {id:"tiles",   label:"Tiles POS", desc:"Cuadros grandes", thumb:
+            React.createElement("div",{style:{width:"100%",height:52,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden",padding:4,background:"var(--bg)"}},
+              React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:3,height:"100%"}},
+                [0,1,2,3,4,5].map(i=>React.createElement("div",{key:i,style:{background:"var(--bg2)",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}},"📦"))
+              )
+            )
+          },
+          {id:"metalico",label:"Metálico",  desc:"Industrial LED",  thumb:
+            React.createElement("div",{style:{width:"100%",height:52,border:"1px solid #444",borderRadius:6,overflow:"hidden",background:"#111",display:"flex",flexDirection:"column",gap:2,padding:5}},
+              [0,1,2].map(i=>React.createElement("div",{key:i,style:{height:12,background:"#1e1e1e",borderRadius:2,display:"flex",alignItems:"center",padding:"0 3px",gap:3}},
+                React.createElement("div",{style:{flex:1,height:4,borderRadius:1,background:"#2e2e2e"}}),
+                React.createElement("div",{style:{background:"#000",border:"1px solid #333",borderRadius:2,padding:"0 4px",fontSize:8,color:"#ff6b00",fontFamily:"monospace",fontWeight:700}},"$$$")
+              ))
+            )
+          },
+          {id:"ticket",  label:"Ticket",    desc:"Papel / recibo",  thumb:
+            React.createElement("div",{style:{width:"100%",height:52,border:"1px solid #ccc",borderRadius:6,overflow:"hidden",background:"#fff",display:"flex",flexDirection:"column"}},
+              React.createElement("div",{style:{background:"#1a1a1a",height:10,display:"flex",alignItems:"center",justifyContent:"center"}}),
+              React.createElement("div",{style:{padding:"4px 5px",display:"flex",flexDirection:"column",gap:3}},
+                [0,1,2].map(i=>React.createElement("div",{key:i,style:{height:8,borderBottom:"1px dashed #ddd",display:"flex",alignItems:"center",gap:3,paddingBottom:2}},
+                  React.createElement("div",{style:{width:6,height:6,borderRadius:1,background:"#eee",flexShrink:0}}),
+                  React.createElement("div",{style:{flex:1,height:3,borderRadius:1,background:"#ddd"}}),
+                  React.createElement("div",{style:{width:14,height:3,borderRadius:1,background:"#1a1a1a",flexShrink:0}})
+                ))
+              )
+            )
+          }
+        ].map(opt=>React.createElement("div",{
+          key:opt.id,
+          onClick:()=>onLayout(opt.id),
+          style:{cursor:"pointer",borderRadius:"var(--radius-lg)",border:"2px solid "+(layout===opt.id?"var(--blue)":"var(--border)"),overflow:"hidden",background:layout===opt.id?"var(--blue-bg)":"var(--bg2)",padding:"8px 8px 6px"}
+        },
+          opt.thumb,
+          React.createElement("div",{style:{marginTop:6,fontSize:12,fontWeight:700,color:layout===opt.id?"var(--blue)":"var(--txt)"}},opt.label),
+          React.createElement("div",{style:{fontSize:10,color:"var(--txt2)"}},opt.desc),
+          layout===opt.id&&React.createElement("div",{style:{fontSize:10,color:"var(--blue)",fontWeight:700,marginTop:2}},"✓ Activo")
         ))
       )
     ),
@@ -1147,6 +1439,7 @@ function App(){
   const[gastos,setGastos]=useState([]);
   const[historial,setHistorial]=useState([]);
   const[tema,setTema]=useState(getTema);
+  const[layout,setLayout]=useState(()=>{try{return localStorage.getItem("kiosco:layout")||"default";}catch{return"default";}});
   const darkMode=!!(TEMAS_K[tema]?.modo==="oscuro");
   const[toast,setToast]=useState(null);
 
@@ -1167,6 +1460,7 @@ function App(){
   const saveCli=v=>{setClientes(v);DB.set("kiosco:fiados",v);DB.syncToCloud("fiados",v);showToast("✓ Guardado");};
   const saveNegocio=n=>{setNegocio(n);DB.set("kiosco:negocio",n);showToast("✓ Nombre guardado");};
   const saveTema=id=>{setTema(id);localStorage.setItem("kiosco:tema",JSON.stringify(id));aplicarTema(id);};
+  const saveLayout=id=>{setLayout(id);localStorage.setItem("kiosco:layout",id);};
   const toggleDark=()=>{const modo=darkMode?"claro":"oscuro";const color=tema.split("-")[1]||"azul";const next=modo+"-"+color;const tid=TEMAS_K[next]?next:modo==="oscuro"?"oscuro-azul":"claro-azul";saveTema(tid);};
   const agregarGasto=g=>{const n=[...gastos,g];setGastos(n);DB.set("kiosco:gastos:"+hoy(),n);DB.syncToCloud("gastos_"+hoy(),n);showToast("✓ Gasto registrado");};
   const eliminarGasto=id=>{const n=gastos.filter(g=>g.id!==id);setGastos(n);DB.set("kiosco:gastos:"+hoy(),n);DB.syncToCloud("gastos_"+hoy(),n);showToast("✓ Gasto eliminado");};
@@ -1190,10 +1484,10 @@ function App(){
   return React.createElement("div",{id:"root"},
     React.createElement(Header,{negocio,darkMode,onToggleDark:toggleDark}),
     React.createElement("div",{className:"app-body"},
-      tab==="ventas"   &&React.createElement(SecVentas,  {prods,onStock:v=>saveProds(v,false),ventas,onVenta:saveVenta,clientes,onGuardarCliente:saveCli,showToast}),
+      tab==="ventas"   &&React.createElement(SecVentas,  {prods,onStock:v=>saveProds(v,false),ventas,onVenta:saveVenta,clientes,onGuardarCliente:saveCli,showToast,layout}),
       tab==="catalogo" &&React.createElement(SecCatalogo, {prods,onGuardar:saveProds,showToast}),
       tab==="gestion"  &&React.createElement(SecGestion,  {prods,ventas,onPrecios:saveProds,clientes,onGuardar:saveCli,gastos,onAgregarGasto:agregarGasto,onEliminarGasto:eliminarGasto,onCerrarCaja:cerrarCaja,historial}),
-      tab==="config"   &&React.createElement(SecConfig,   {negocio,onSave:saveNegocio,tema,onTema:saveTema,darkMode,onToggleDark:toggleDark})
+      tab==="config"   &&React.createElement(SecConfig,   {negocio,onSave:saveNegocio,tema,onTema:saveTema,darkMode,onToggleDark:toggleDark,layout,onLayout:saveLayout})
     ),
     React.createElement("nav",{className:"nav"},
       TABS.map(t=>React.createElement("button",{key:t.key,className:"nav-btn"+(tab===t.key?" activo":""),onClick:()=>setTab(t.key)},
