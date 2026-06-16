@@ -355,6 +355,49 @@ h2{font-size:17px;font-weight:700;color:var(--txt);margin-bottom:1rem;}
   .pos-left{width:60%;}
   .pos-prod-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
 }
+
+/* ═══ LAYOUT TILES ═══════════════════════════════════════════ */
+[data-layout="tiles"] .header{background:#000;border-bottom:1px solid rgba(255,255,255,.07);}
+[data-layout="tiles"] .nav{background:#000;border-top:1px solid rgba(255,255,255,.07);}
+[data-layout="tiles"] .nav-label{color:#6b7280;}
+[data-layout="tiles"] .nav-btn.activo .nav-label{color:#818cf8;}
+[data-layout="tiles"] .card,.caja-section,.rsec{border-color:rgba(255,255,255,.08);}
+
+/* ═══ LAYOUT METÁLICO ════════════════════════════════════════ */
+[data-layout="metalico"] .header{background:linear-gradient(180deg,#2a2a2a,#1c1c1c);border-bottom:2px solid #111;box-shadow:inset 0 -1px 0 #3a3a3a;}
+[data-layout="metalico"] .negocio-nombre{font-family:'Courier New',monospace;letter-spacing:.08em;text-transform:uppercase;font-size:14px;}
+[data-layout="metalico"] .header-datetime{font-family:'Courier New',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#666;}
+[data-layout="metalico"] .nav{background:linear-gradient(180deg,#1a1a1a,#111);border-top:2px solid #333;}
+[data-layout="metalico"] .nav-btn{font-family:'Courier New',monospace;}
+[data-layout="metalico"] .nav-label{font-size:8px;letter-spacing:.05em;text-transform:uppercase;}
+[data-layout="metalico"] .nav-btn.activo .nav-label{color:#ff6b00;}
+[data-layout="metalico"] .card,.caja-section,.rsec{border-radius:4px;border-color:#333;}
+[data-layout="metalico"] .btn-pri{background:#ff6b00;border-radius:4px;}
+[data-layout="metalico"] .btn-sec{border-radius:4px;}
+[data-layout="metalico"] .modal{border-radius:4px;}
+[data-layout="metalico"] h2{font-family:'Courier New',monospace;text-transform:uppercase;letter-spacing:.05em;}
+
+/* ═══ LAYOUT TICKET ══════════════════════════════════════════ */
+[data-layout="ticket"] .header{background:#1a1a1a;border-bottom:none;}
+[data-layout="ticket"] .negocio-nombre{color:#fff;font-family:'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;}
+[data-layout="ticket"] .header-datetime{color:rgba(255,255,255,.45);font-family:'Courier New',monospace;font-size:10px;letter-spacing:.04em;}
+[data-layout="ticket"] .btn-dark{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff;}
+[data-layout="ticket"] .nav{background:#fff;border-top:2px solid #1a1a1a;}
+[data-layout="ticket"] .nav-label{color:#999;}
+[data-layout="ticket"] .nav-btn.activo .nav-label{color:#1a1a1a;font-weight:900;}
+[data-layout="ticket"] .nav-icon{font-size:18px;}
+[data-layout="ticket"] .card{border-radius:0;border:1.5px solid var(--border);}
+[data-layout="ticket"] .btn-pri{background:#1a1a1a;border-radius:2px;letter-spacing:.06em;text-transform:uppercase;font-family:'Courier New',monospace;}
+[data-layout="ticket"] .btn-sec{border-radius:2px;font-family:'Courier New',monospace;}
+[data-layout="ticket"] .modal{border-radius:0;border:2px solid #1a1a1a;}
+[data-layout="ticket"] h2{font-family:'Courier New',monospace;text-transform:uppercase;letter-spacing:.08em;}
+[data-layout="ticket"] .caja-tabs,.rtabs{border-radius:0;}
+[data-layout="ticket"] .caja-tab,.rtab{border-radius:0;font-family:'Courier New',monospace;font-size:11px;letter-spacing:.04em;}
+
+/* ═══ LOGO EN HEADER ════════════════════════════════════════ */
+.logo-img{width:34px;height:34px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);}
+.logo-ini{width:34px;height:34px;border-radius:8px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;flex-shrink:0;letter-spacing:-.01em;}
+.header-name-block{display:flex;align-items:center;gap:8px;}
 </style>
 </head>
 <body>
@@ -402,8 +445,27 @@ const TEMAS_K = {
   "claro-gris":     {nombre:"Minimalista",    modo:"claro", emoji:"⚪",dots:["#eef0f2","#374151","#065f46"],vars:{"--bg":"#f8f9fa","--bg2":"#eef0f2","--bg3":"#e5e7eb","--txt":"#111827","--txt2":"#4b5563","--txt3":"#9ca3af","--border":"rgba(0,0,0,0.08)","--border2":"rgba(0,0,0,0.18)","--blue":"#374151","--blue-bg":"#e0e7ff","--green":"#065f46","--green-bg":"#d1fae5","--orange":"#92400e","--orange-bg":"#fef3c7","--red":"#991b1b","--red-bg":"#fee2e2","body-bg":"#e5e7eb"}},
 };
 function aplicarTema(id){const t=TEMAS_K[id];if(!t)return;const root=document.documentElement;Object.entries(t.vars).forEach(([k,v])=>{if(k==="body-bg")document.body.style.background=v;else root.style.setProperty(k,v);});}
+
+function aplicarLayout(id,temaId){
+  const root=document.documentElement;
+  root.setAttribute("data-layout",id||"default");
+  if(!id||id==="default"){
+    document.body.style.fontFamily="";
+    if(temaId)aplicarTema(temaId);
+    return;
+  }
+  const pal={
+    tiles:{"--bg":"#1c1c1e","--bg2":"#2c2c2e","--bg3":"#000","--txt":"#e5e7eb","--txt2":"#9ca3af","--txt3":"#6b7280","--border":"rgba(255,255,255,.08)","--border2":"rgba(255,255,255,.16)","--blue":"#818cf8","--blue-bg":"#1e1b4b","--green":"#4ade80","--green-bg":"#052e16","--red":"#f87171","--red-bg":"#300","--orange":"#fb923c","--orange-bg":"#2d1200","body-bg":"#000"},
+    metalico:{"--bg":"#1e1e1e","--bg2":"#2a2a2a","--bg3":"#111","--txt":"#cccccc","--txt2":"#888","--txt3":"#555","--border":"rgba(255,255,255,.1)","--border2":"rgba(255,255,255,.2)","--blue":"#ff6b00","--blue-bg":"#2a1200","--green":"#a3e635","--green-bg":"#1a2600","--red":"#f87171","--red-bg":"#300","--orange":"#fbbf24","--orange-bg":"#2d1a00","body-bg":"#111"},
+    ticket:{"--bg":"#fff","--bg2":"#f5f0e8","--bg3":"#ede8df","--txt":"#1a1a1a","--txt2":"#666","--txt3":"#999","--border":"#d5cfc6","--border2":"#1a1a1a","--blue":"#1a1a1a","--blue-bg":"#ece7dd","--green":"#1a5c1a","--green-bg":"#e4f4e4","--red":"#991b1b","--red-bg":"#fee2e2","--orange":"#92400e","--orange-bg":"#fef3c7","body-bg":"#ede8df"},
+  };
+  const vars=pal[id];
+  if(!vars)return;
+  Object.entries(vars).forEach(([k,v])=>{if(k==="body-bg")document.body.style.background=v;else root.style.setProperty(k,v);});
+  document.body.style.fontFamily=(id==="ticket"||id==="metalico")?"'Courier New',Courier,monospace":"";
+}
 function getTema(){try{return JSON.parse(localStorage.getItem("kiosco:tema")||'"oscuro-azul"');}catch{return"oscuro-azul";}}
-(()=>{try{aplicarTema(getTema());}catch{}})();
+(()=>{try{aplicarTema(getTema());}catch{}try{const l=localStorage.getItem("kiosco:layout")||"default";if(l!=="default")aplicarLayout(l);}catch{}})();
 
 const{useState,useEffect,useRef}=React;
 const CATS=["Golosinas","Chocolates","Chicles","Pochoclos","Snacks salados","Bebidas con gas","Jugos","Agua","Energizantes","Cervezas","Cigarrillos","Encendedores","Lácteos","Fiambres","Almacén","Panadería","Limpieza","Higiene personal","Pilas / electrónica","Otro"];
@@ -1219,11 +1281,31 @@ function SecGestion({prods,ventas,onPrecios,clientes,onGuardar,gastos,onAgregarG
 }
 
 // ── NUEVA: Configuración como sección (no modal) ──────────────────────────────
-function SecConfig({negocio,onSave,tema,onTema,darkMode,onToggleDark,layout,onLayout}){
+function SecConfig({negocio,onSave,tema,onTema,darkMode,onToggleDark,layout,onLayout,logo,onSaveLogo}){
   const[n,setN]=useState(negocio);
   const[modo,setModo]=useState(()=>TEMAS_K[tema]?.modo||"oscuro");
   const temasFil=Object.entries(TEMAS_K).filter(([,t])=>t.modo===modo);
   return React.createElement("div",null,
+
+    React.createElement("div",{className:"config-section"},
+      React.createElement("div",{className:"config-title"},"🏪 Logo del negocio"),
+      React.createElement("div",{style:{display:"flex",gap:12,alignItems:"center"}},
+        React.createElement("label",{style:{cursor:"pointer",flexShrink:0}},
+          logo
+            ?React.createElement("img",{src:logo,style:{width:72,height:72,borderRadius:10,objectFit:"cover",border:"2px solid var(--border)"}})
+            :React.createElement("div",{style:{width:72,height:72,borderRadius:10,background:"var(--bg2)",border:"2px dashed var(--border)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}},
+                React.createElement("span",{style:{fontSize:24}},"📷"),
+                React.createElement("span",{style:{fontSize:9,color:"var(--txt2)",fontWeight:700}},"SUBIR")
+              ),
+          React.createElement("input",{type:"file",accept:"image/*",style:{display:"none"},onChange:e=>{const f=e.target.files[0];if(f)compress(f,b=>onSaveLogo(b));}})
+        ),
+        React.createElement("div",{style:{flex:1}},
+          React.createElement("div",{style:{fontSize:13,color:"var(--txt)",fontWeight:600,marginBottom:4}},"Foto del local o logo"),
+          React.createElement("div",{style:{fontSize:11,color:"var(--txt2)",lineHeight:1.5,marginBottom:8}},"Aparece en el encabezado de la app junto al nombre."),
+          logo&&React.createElement("button",{className:"btn-sec",style:{fontSize:12,padding:"5px 12px"},onClick:()=>onSaveLogo("")},"🗑️ Quitar logo")
+        )
+      )
+    ),
     React.createElement("div",{className:"config-section"},
       React.createElement("div",{className:"config-title"},"🏪 Nombre del negocio"),
       React.createElement("div",{className:"field"},React.createElement("input",{value:n,onChange:e=>setN(e.target.value),placeholder:"Ej: Kiosco El Sol"})),
@@ -1308,13 +1390,21 @@ function SecConfig({negocio,onSave,tema,onTema,darkMode,onToggleDark,layout,onLa
 }
 
 // ── HEADER (MODIFICADO: fecha + hora juntas, mismo tamaño, sin botón config) ──
-function Header({negocio,darkMode,onToggleDark}){
+function Header({negocio,darkMode,onToggleDark,logo,layout}){
   const h=useHora();
   const fecha=new Date().toLocaleDateString("es-AR",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+  const inicial=(negocio||"K")[0].toUpperCase();
   return React.createElement("div",{className:"header"},
     React.createElement("div",{className:"header-left"},
-      React.createElement("div",{className:"negocio-nombre"},negocio),
-      React.createElement("div",{className:"header-datetime"},fecha+" · "+h)
+      React.createElement("div",{className:"header-name-block"},
+        logo
+          ?React.createElement("img",{src:logo,className:"logo-img",alt:"logo"})
+          :React.createElement("div",{className:"logo-ini"},inicial),
+        React.createElement("div",null,
+          React.createElement("div",{className:"negocio-nombre"},negocio),
+          React.createElement("div",{className:"header-datetime"},fecha+" · "+h)
+        )
+      )
     ),
     React.createElement("div",{className:"header-right"},
       React.createElement("button",{className:"btn-dark",onClick:onToggleDark,title:darkMode?"Modo claro":"Modo oscuro"},darkMode?"☀️":"🌙")
@@ -1335,7 +1425,7 @@ function BtnEscala(){
 }
 
 // ── LICENCIAS ────────────────────────────────────────────────────────────────
-const BREVO_KEY="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";
+const BREVO_KEY="xsmtpsib-b9482fcd85de3edd058b8e94bd1724933551017e275a5d738bfc78857d8a60d2-laKhJCCj4L4H4p0o";
 const BREVO_FROM="carabajalponce1980@gmail.com";
 async function enviarEmailBrevo({to,toName,subject,htmlContent}){try{const res=await fetch("https://api.brevo.com/v3/smtp/email",{method:"POST",headers:{"Content-Type":"application/json","api-key":BREVO_KEY},body:JSON.stringify({sender:{name:"Mi Kiosco · Emma Soluciones",email:BREVO_FROM},to:[{email:to,name:toName||to}],subject,htmlContent})});return res.ok;}catch(e){return false;}}
 
@@ -1440,6 +1530,7 @@ function App(){
   const[historial,setHistorial]=useState([]);
   const[tema,setTema]=useState(getTema);
   const[layout,setLayout]=useState(()=>{try{return localStorage.getItem("kiosco:layout")||"default";}catch{return"default";}});
+  const[logo,setLogo]=useState(()=>DB.get("kiosco:logo")||"");
   const darkMode=!!(TEMAS_K[tema]?.modo==="oscuro");
   const[toast,setToast]=useState(null);
 
@@ -1460,7 +1551,8 @@ function App(){
   const saveCli=v=>{setClientes(v);DB.set("kiosco:fiados",v);DB.syncToCloud("fiados",v);showToast("✓ Guardado");};
   const saveNegocio=n=>{setNegocio(n);DB.set("kiosco:negocio",n);showToast("✓ Nombre guardado");};
   const saveTema=id=>{setTema(id);localStorage.setItem("kiosco:tema",JSON.stringify(id));aplicarTema(id);};
-  const saveLayout=id=>{setLayout(id);localStorage.setItem("kiosco:layout",id);};
+  const saveLayout=id=>{setLayout(id);localStorage.setItem("kiosco:layout",id);aplicarLayout(id,tema);};
+  const saveLogo=b=>{setLogo(b);DB.set("kiosco:logo",b);showToast(b?"✓ Logo guardado":"Logo quitado");};
   const toggleDark=()=>{const modo=darkMode?"claro":"oscuro";const color=tema.split("-")[1]||"azul";const next=modo+"-"+color;const tid=TEMAS_K[next]?next:modo==="oscuro"?"oscuro-azul":"claro-azul";saveTema(tid);};
   const agregarGasto=g=>{const n=[...gastos,g];setGastos(n);DB.set("kiosco:gastos:"+hoy(),n);DB.syncToCloud("gastos_"+hoy(),n);showToast("✓ Gasto registrado");};
   const eliminarGasto=id=>{const n=gastos.filter(g=>g.id!==id);setGastos(n);DB.set("kiosco:gastos:"+hoy(),n);DB.syncToCloud("gastos_"+hoy(),n);showToast("✓ Gasto eliminado");};
@@ -1482,12 +1574,12 @@ function App(){
   ];
 
   return React.createElement("div",{id:"root"},
-    React.createElement(Header,{negocio,darkMode,onToggleDark:toggleDark}),
+    React.createElement(Header,{negocio,darkMode,onToggleDark:toggleDark,logo,layout}),
     React.createElement("div",{className:"app-body"},
       tab==="ventas"   &&React.createElement(SecVentas,  {prods,onStock:v=>saveProds(v,false),ventas,onVenta:saveVenta,clientes,onGuardarCliente:saveCli,showToast,layout}),
       tab==="catalogo" &&React.createElement(SecCatalogo, {prods,onGuardar:saveProds,showToast}),
       tab==="gestion"  &&React.createElement(SecGestion,  {prods,ventas,onPrecios:saveProds,clientes,onGuardar:saveCli,gastos,onAgregarGasto:agregarGasto,onEliminarGasto:eliminarGasto,onCerrarCaja:cerrarCaja,historial}),
-      tab==="config"   &&React.createElement(SecConfig,   {negocio,onSave:saveNegocio,tema,onTema:saveTema,darkMode,onToggleDark:toggleDark,layout,onLayout:saveLayout})
+      tab==="config"   &&React.createElement(SecConfig,   {negocio,onSave:saveNegocio,tema,onTema:saveTema,darkMode,onToggleDark:toggleDark,layout,onLayout:saveLayout,logo,onSaveLogo:saveLogo})
     ),
     React.createElement("nav",{className:"nav"},
       TABS.map(t=>React.createElement("button",{key:t.key,className:"nav-btn"+(tab===t.key?" activo":""),onClick:()=>setTab(t.key)},
