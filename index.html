@@ -409,9 +409,28 @@ h2{font-size:17px;font-weight:700;color:var(--txt);margin-bottom:1rem;}
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,doc,getDoc,setDoc,updateDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getAuth,signInAnonymously,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 const firebaseConfig={apiKey:"AIzaSyAI3bPrAZlAvduooCaUZPF1LNeJcriL-WI",authDomain:"app-kiosco-c9482.firebaseapp.com",projectId:"app-kiosco-c9482",storageBucket:"app-kiosco-c9482.firebasestorage.app",messagingSenderId:"511057681349",appId:"1:511057681349:web:49c18f441f1700416989ac"};
 const fbApp=initializeApp(firebaseConfig);
 const db=getFirestore(fbApp);
+// Esta app no tenía NINGUNA sesión (ni siquiera anónima): Firestore se
+// usaba totalmente sin identificar quién pedía los datos. Se agrega acá
+// para poder atar cada negocio a su sesión real (ver claimNegocioKiosco).
+const auth=getAuth(fbApp);
+signInAnonymously(auth).catch(function(e){console.error("[Auth anónimo] FALLÓ:",e&&e.code,e&&e.message);});
+window.auth=auth;
+function esperarAuthListoKiosco(){
+  return new Promise(function(resolve){
+    if(auth.currentUser){resolve(auth.currentUser);return;}
+    const unsub=onAuthStateChanged(auth,function(u){if(u){unsub();resolve(u);}});
+  });
+}
+window.claimNegocioKiosco=async function(){
+  try{
+    const user=await esperarAuthListoKiosco();
+    await setDoc(doc(db,"negocios",NEGOCIO_ID),{ownerAuthUid:user.uid},{merge:true});
+  }catch(e){ /* si falla, se reintenta la próxima vez que se abra la app */ }
+};
 const licenciasConfig={apiKey:"AIzaSyAFQ4ybqIoVV3rWe1FMjMVUZ-qzLNZbdBk",authDomain:"app-control-de-apps.firebaseapp.com",projectId:"app-control-de-apps",storageBucket:"app-control-de-apps.firebasestorage.app",messagingSenderId:"761424199819",appId:"1:761424199819:web:513eeaf0e54f4e1401d48e"};
 const licenciasApp=initializeApp(licenciasConfig,"licencias");
 const dbLic=getFirestore(licenciasApp);
@@ -1502,7 +1521,7 @@ function PantallaPin({pin,onOk}){
   );
 }
 
-function AppWrapper(){const lic=getLicencia();const[pantalla,setPantalla]=useState(()=>lic?"pin":"activacion");const[pin,setPin]=useState(()=>lic?.pin||null);if(pantalla==="activacion")return React.createElement(PantallaActivacion,{onActivado:p=>{setPin(p);setPantalla("pin");}});if(pantalla==="pin")return React.createElement(PantallaPin,{pin,onOk:()=>setPantalla("app")});return React.createElement(App);}
+function AppWrapper(){const lic=getLicencia();const[pantalla,setPantalla]=useState(()=>lic?"pin":"activacion");const[pin,setPin]=useState(()=>lic?.pin||null);const entrarAlApp=async()=>{try{if(window.claimNegocioKiosco)await window.claimNegocioKiosco();}catch(e){}setPantalla("app");};if(pantalla==="activacion")return React.createElement(PantallaActivacion,{onActivado:p=>{setPin(p);setPantalla("pin");}});if(pantalla==="pin")return React.createElement(PantallaPin,{pin,onOk:entrarAlApp});return React.createElement(App);}
 
 // ── DATOS DEMO ───────────────────────────────────────────────────────────────
 const PRODUCTOS_EJEMPLO=[
