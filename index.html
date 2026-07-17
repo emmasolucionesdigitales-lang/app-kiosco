@@ -497,7 +497,10 @@ const ICONS={"Golosinas":"🍬","Chocolates":"🍫","Chicles":"🫧","Pochoclos"
 const CAT_COLORS={"Golosinas":"#FFF8E1","Chocolates":"#FFF0E6","Chicles":"#E8F4FD","Pochoclos":"#FFF9E6","Snacks salados":"#FFF3E0","Bebidas con gas":"#E3F2FD","Jugos":"#FFF8E1","Agua":"#E8F5FE","Energizantes":"#F3E5F5","Cervezas":"#FFF8DC","Cigarrillos":"#F5F5F5","Encendedores":"#FFE0E0","Lácteos":"#F5F5F5","Fiambres":"#FDEDEC","Almacén":"#E6F1FB","Panadería":"#FFF8DC","Limpieza":"#E8F5E9","Higiene personal":"#F3E5F5","Pilas / electrónica":"#E8EAF6","Otro":"#F5F5F4"};
 const CATS_BEBIDAS=["Bebidas con gas","Jugos","Agua","Energizantes","Cervezas"];
 if(!window.DB){window.DB={get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}},async syncToCloud(){},async loadFromCloud(k){return window.DB.get(k);}};}
-const DB=window.DB;
+// DB delega siempre a window.DB en el momento de la llamada (no lo fija al cargar el script).
+// Esto evita que el logo (y otros datos) queden "pegados" a una version vieja de DB
+// si el script de Firebase todavia no termino de inicializar cuando arranco React.
+const DB={get:(...a)=>window.DB.get(...a),set:(...a)=>window.DB.set(...a),syncToCloud:(...a)=>window.DB.syncToCloud(...a),loadFromCloud:(...a)=>window.DB.loadFromCloud(...a),checkCliente:(...a)=>window.DB.checkCliente(...a)};
 function hoy(){return new Date().toISOString().slice(0,10);}
 function hora(){return new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});}
 function fechaCorta(){return new Date().toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"2-digit"});}
@@ -1566,7 +1569,11 @@ function App(){
     const g=DB.get("kiosco:gastos:"+hoy());if(g)setGastos(g);
     const h=DB.get("kiosco:historial");if(h)setHistorial(h);
     const syncFromCloud=async()=>{try{const cp=await DB.loadFromCloud("stock");if(cp&&cp.length>0){setProds(cp);DB.set("kiosco:stock",cp);}const cv=await DB.loadFromCloud("ventas_"+hoy());if(cv)setVentas(cv);const cc=await DB.loadFromCloud("fiados");if(cc)setClientes(cc);const ch=await DB.loadFromCloud("historial");if(ch)setHistorial(ch);}catch(e){console.warn("Sync error",e);}};
-    if(window.FIREBASE_READY){syncFromCloud();}else{window.addEventListener("firebase-ready",syncFromCloud,{once:true});}
+    // Vuelve a leer logo y nombre por si el primer useState corrio antes de que
+    // window.DB quedara listo (con el prefijo real del negocio): sin esto, el logo
+    // ya guardado no aparecia y se veia el cuadrado verde con la inicial en su lugar.
+    const refrescarLocal=()=>{const lg=DB.get("kiosco:logo");if(lg)setLogo(lg);const n=DB.get("kiosco:negocio");if(n)setNegocio(n);};
+    if(window.FIREBASE_READY){refrescarLocal();syncFromCloud();}else{window.addEventListener("firebase-ready",()=>{refrescarLocal();syncFromCloud();},{once:true});}
   },[]);
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2200);};
