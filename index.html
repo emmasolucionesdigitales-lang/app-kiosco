@@ -4457,8 +4457,7 @@ function BtnEscala() {
 }
 
 // ── LICENCIAS ────────────────────────────────────────────────────────────────
-const BREVO_KEY = "xsmtpsib-b9482fcd85de3edd058b8e94bd1724933551017e275a5d738bfc78857d8a60d2-laKhJCCj4L4H4p0o";
-const BREVO_FROM = "carabajalponce1980@gmail.com";
+const MAIL_RELAY_URL = "https://emma-mail-worker.emmasolucionesdigitales.workers.dev/relay";
 async function enviarEmailBrevo({
   to,
   toName,
@@ -4466,21 +4465,15 @@ async function enviarEmailBrevo({
   htmlContent
 }) {
   try {
-    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    const res = await fetch(MAIL_RELAY_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "api-key": BREVO_KEY
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        sender: {
-          name: "Mi Kiosco · Emma Soluciones",
-          email: BREVO_FROM
-        },
-        to: [{
-          email: to,
-          name: toName || to
-        }],
+        app: "kiosco",
+        to,
+        toName,
         subject,
         htmlContent
       })
